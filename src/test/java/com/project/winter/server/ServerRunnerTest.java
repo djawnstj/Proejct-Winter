@@ -1,6 +1,5 @@
 package com.project.winter.server;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -22,7 +21,7 @@ class ServerRunnerTest {
 
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
-            assertEquals(response.statusCode(), 404);
+            assertEquals(response.statusCode(), 200);
     }
 
     @Test
@@ -30,13 +29,13 @@ class ServerRunnerTest {
 
         HttpClient httpClient = HttpClient.newHttpClient();
             HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:8080/get"))
+                    .uri(URI.create("http://localhost:8080/post"))
                     .POST(HttpRequest.BodyPublishers.ofString(""))
                     .build();
 
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
-            assertEquals(response.statusCode(), 404);
+            assertEquals(response.statusCode(), 200);
     }
 
 }
