@@ -1,5 +1,6 @@
 package com.project.winter.server;
 
+import com.project.winter.beans.BeanFactory;
 import org.apache.catalina.*;
 import org.apache.catalina.startup.Tomcat;
 
@@ -46,6 +47,7 @@ public class ServerRunner {
 
     public static void startServer() {
         serverThread.start();
+        BeanFactory.initialize();
     }
 
 }
