@@ -60,7 +60,7 @@ public class BeanFactory {
             Arrays.stream(method.getParameters()).forEach(parameter -> {
                 Class<?> parameterType = parameter.getType();
                 String parameterName = parameter.getName();
-                if (isBeanInitialized(clazz)) parameters.add(getBean(parameterName, clazz));
+                if (isBeanInitialized(parameterName, clazz)) parameters.add(getBean(parameterName, clazz));
                 else parameters.add(createInstance(parameterType));
             });
 
@@ -77,7 +77,7 @@ public class BeanFactory {
 
     private static void createBeansByClass(Set<Class<?>> preInstantiatedClazz) {
         for (Class<?> clazz : preInstantiatedClazz) {
-            if (isBeanInitialized(clazz)) continue;
+            if (isBeanInitialized(clazz.getSimpleName(), clazz)) continue;
 
             Object instance = createInstance(clazz);
             putBean(clazz.getName(), clazz, instance);
@@ -110,8 +110,9 @@ public class BeanFactory {
         return foundConstructor;
     }
 
-    private static boolean isBeanInitialized(Class<?> clazz) {
-        return beans.containsKey(clazz);
+    private static boolean isBeanInitialized(String beanName, Class<?> clazz) {
+        BeanInfo beanInfo = new BeanInfo(beanName, clazz);
+        return beans.containsKey(beanInfo);
     }
 
     private static <T> T getBean(String beanName, Class<T> clazz) {
