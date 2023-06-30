@@ -1,5 +1,6 @@
 package com.project.winter.beans;
 
+import com.project.winter.annotation.Bean;
 import com.project.winter.annotation.Component;
 import com.project.winter.annotation.Configuration;
 import org.reflections.ReflectionUtils;
@@ -14,7 +15,7 @@ import java.util.*;
 public class BeanFactory {
     private static String packagePrefix = "com.project.winter";
     private static Reflections reflections;
-    private static final Map<Class<?>, Object> beans = new HashMap<>();
+    private static final Map<BeanInfo, Object> beans = new HashMap<>();
     private static final List<Object> configurations = new ArrayList<>();
 
     private BeanFactory() {}
@@ -52,16 +53,22 @@ public class BeanFactory {
         Class<?> subclass = configuration.getClass();
         Map<Class<?>, Method> beanMethodNames = BeanFactoryUtils.getBeanAnnotatedMethodInConfiguration(subclass);
 
-        List<Object> parameters = new ArrayList<>();
 
         beanMethodNames.forEach((clazz, method) -> {
-            Arrays.stream(method.getParameterTypes()).forEach(parameterType -> {
-                if (isBeanInitialized(clazz)) parameters.add(getBean(clazz));
+            List<Object> parameters = new ArrayList<>();
+
+            Arrays.stream(method.getParameters()).forEach(parameter -> {
+                Class<?> parameterType = parameter.getType();
+                String parameterName = parameter.getName();
+                if (isBeanInitialized(clazz)) parameters.add(getBean(parameterName, clazz));
                 else parameters.add(createInstance(parameterType));
             });
 
             try {
-                putBean(clazz, method.invoke(configuration, parameters.toArray()));
+                Object object = method.invoke(configuration, parameters.toArray());
+                Bean anno = method.getAnnotation(Bean.class);
+                String beanName = (anno.name().isEmpty()) ? method.getName() : anno.name();
+                putBean(beanName, clazz, object);
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             }
@@ -73,7 +80,7 @@ public class BeanFactory {
             if (isBeanInitialized(clazz)) continue;
 
             Object instance = createInstance(clazz);
-            putBean(clazz, instance);
+            putBean(clazz.getName(), clazz, instance);
         }
     }
 
@@ -107,12 +114,14 @@ public class BeanFactory {
         return beans.containsKey(clazz);
     }
 
-    private static <T> T getBean(Class<T> clazz) {
-        return (T) beans.get(clazz);
+    private static <T> T getBean(String beanName, Class<T> clazz) {
+        BeanInfo beanInfo = new BeanInfo(beanName, clazz);
+        return (T) beans.get(beanInfo);
     }
 
-    private static <T> void putBean(Class<T> clazz, Object bean) {
-        beans.put(clazz, bean);
+    private static <T> void putBean(String beanName, Class<T> clazz, Object bean) {
+        BeanInfo beanInfo = new BeanInfo(beanName, clazz);
+        beans.put(beanInfo, bean);
     }
 
 }
