@@ -11,6 +11,10 @@ public class BeanInfo {
         this.clazz = clazz;
     }
 
+    public boolean isCorrespondName(String beanName) {
+        return this.beanName.equals(beanName);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

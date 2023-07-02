@@ -3,6 +3,7 @@ package com.project.winter.beans;
 import com.project.winter.annotation.Bean;
 import com.project.winter.annotation.Component;
 import com.project.winter.annotation.Configuration;
+import com.project.winter.exception.NoMatchByBeanNameException;
 import org.reflections.ReflectionUtils;
 import org.reflections.Reflections;
 
@@ -52,7 +53,6 @@ public class BeanFactory {
     private static void createBeanInConfigurationAnnotatedClass(Object configuration) {
         Class<?> subclass = configuration.getClass();
         Map<Class<?>, Method> beanMethodNames = BeanFactoryUtils.getBeanAnnotatedMethodInConfiguration(subclass);
-
 
         beanMethodNames.forEach((clazz, method) -> {
             List<Object> parameters = new ArrayList<>();
@@ -115,9 +115,18 @@ public class BeanFactory {
         return beans.containsKey(beanInfo);
     }
 
-    private static <T> T getBean(String beanName, Class<T> clazz) {
+    public static <T> T getBean(String beanName, Class<T> clazz) {
         BeanInfo beanInfo = new BeanInfo(beanName, clazz);
-        return (T) beans.get(beanInfo);
+        return (T) getBean(beanInfo);
+    }
+
+    public static Object getBean(BeanInfo beanInfo) {
+        return beans.get(beanInfo);
+    }
+
+    public static Object getBean(String beanName) {
+        BeanInfo beanInfo = beans.keySet().stream().filter(key -> key.isCorrespondName(beanName)).findFirst().orElseThrow(NoMatchByBeanNameException::new);
+        return getBean(beanInfo);
     }
 
     private static <T> void putBean(String beanName, Class<T> clazz, Object bean) {
