@@ -3,7 +3,8 @@ package com.project.winter.beans;
 import com.project.winter.annotation.Bean;
 import com.project.winter.annotation.Component;
 import com.project.winter.annotation.Configuration;
-import com.project.winter.exception.NoMatchByBeanNameException;
+import com.project.winter.exception.NoFindBeanByTypeException;
+import com.project.winter.exception.NoFindBeanByBeanNameException;
 import org.reflections.ReflectionUtils;
 import org.reflections.Reflections;
 
@@ -125,8 +126,13 @@ public class BeanFactory {
     }
 
     public static Object getBean(String beanName) {
-        BeanInfo beanInfo = beans.keySet().stream().filter(key -> key.isCorrespondName(beanName)).findFirst().orElseThrow(NoMatchByBeanNameException::new);
+        BeanInfo beanInfo = beans.keySet().stream().filter(key -> key.isCorrespondName(beanName)).findFirst().orElseThrow(NoFindBeanByBeanNameException::new);
         return getBean(beanInfo);
+    }
+
+    public static <T> T getBean(Class<T> clazz) {
+        BeanInfo beanInfo = beans.keySet().stream().filter(key -> key.sameType(clazz)).findFirst().orElseThrow(NoFindBeanByTypeException::new);
+        return (T) getBean(beanInfo);
     }
 
     private static <T> void putBean(String beanName, Class<T> clazz, Object bean) {
