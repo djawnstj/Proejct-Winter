@@ -1,4 +1,4 @@
-package com.project.winter.exception;
+package com.project.winter.exception.bean;
 
 public class NoFindBeanByBeanNameException extends BeanException {
     public NoFindBeanByBeanNameException() {}
