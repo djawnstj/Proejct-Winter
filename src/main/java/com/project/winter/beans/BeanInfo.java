@@ -15,6 +15,18 @@ public class BeanInfo {
         return this.beanName.equals(beanName);
     }
 
+    public boolean sameType(Class<?> type) {
+        return this.clazz == type;
+    }
+
+    public String getBeanName() {
+        return this.beanName;
+    }
+
+    public Class<?> getClazz() {
+        return clazz;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
