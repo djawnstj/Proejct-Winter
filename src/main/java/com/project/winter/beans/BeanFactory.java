@@ -3,8 +3,8 @@ package com.project.winter.beans;
 import com.project.winter.annotation.Bean;
 import com.project.winter.annotation.Component;
 import com.project.winter.annotation.Configuration;
-import com.project.winter.exception.NoFindBeanByTypeException;
-import com.project.winter.exception.NoFindBeanByBeanNameException;
+import com.project.winter.exception.bean.NoFindBeanByTypeException;
+import com.project.winter.exception.bean.NoFindBeanByBeanNameException;
 import org.reflections.ReflectionUtils;
 import org.reflections.Reflections;
 
@@ -138,6 +138,24 @@ public class BeanFactory {
     private static <T> void putBean(String beanName, Class<T> clazz, Object bean) {
         BeanInfo beanInfo = new BeanInfo(beanName, clazz);
         beans.put(beanInfo, bean);
+    }
+
+    public static <T> Map<BeanInfo, T> getBeans(Class<T> type) {
+        Map<BeanInfo, T> result = new HashMap<>();
+        beans.forEach((key, value) -> {
+            if (key.sameType(type) || key.isAssignableFrom(type)) result.put(key, (T) value);
+        });
+
+        return result;
+    }
+
+    public static Map<BeanInfo, Object> getAnnotatedBeans(Class<? extends Annotation> annotation) {
+        Map<BeanInfo, Object> result = new HashMap<>();
+        beans.forEach((key, value) -> {
+            if (key.isAnnotated(annotation)) result.put(key, value);
+        });
+
+        return result;
     }
 
 }
