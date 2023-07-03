@@ -1,11 +1,12 @@
 package com.project.winter.beans;
 
 import com.project.winter.annotation.Bean;
+import com.project.winter.mvc.handler.mapping.BeanNameUrlHandlerMapping;
+import com.project.winter.mvc.handler.mapping.HandlerMapping;
+import com.project.winter.mvc.handler.mapping.RequestMappingHandlerMapping;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class BeanFactoryUtils {
 
@@ -21,6 +22,17 @@ public class BeanFactoryUtils {
         });
 
         return instantMap;
+    }
+
+    public static List<HandlerMapping> initHandlerMappings() {
+        List<HandlerMapping> handlerMappings = new ArrayList<>();
+
+        handlerMappings.add(new RequestMappingHandlerMapping());
+        handlerMappings.add(new BeanNameUrlHandlerMapping());
+
+        handlerMappings.forEach(HandlerMapping::init);
+
+        return handlerMappings;
     }
 
 }
