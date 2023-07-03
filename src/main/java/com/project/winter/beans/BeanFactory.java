@@ -3,6 +3,8 @@ package com.project.winter.beans;
 import com.project.winter.annotation.Bean;
 import com.project.winter.annotation.Component;
 import com.project.winter.annotation.Configuration;
+import com.project.winter.exception.bean.NoFindBeanByTypeException;
+import com.project.winter.exception.bean.NoFindBeanByBeanNameException;
 import org.reflections.ReflectionUtils;
 import org.reflections.Reflections;
 
@@ -52,7 +54,6 @@ public class BeanFactory {
     private static void createBeanInConfigurationAnnotatedClass(Object configuration) {
         Class<?> subclass = configuration.getClass();
         Map<Class<?>, Method> beanMethodNames = BeanFactoryUtils.getBeanAnnotatedMethodInConfiguration(subclass);
-
 
         beanMethodNames.forEach((clazz, method) -> {
             List<Object> parameters = new ArrayList<>();
@@ -115,14 +116,46 @@ public class BeanFactory {
         return beans.containsKey(beanInfo);
     }
 
-    private static <T> T getBean(String beanName, Class<T> clazz) {
+    public static <T> T getBean(String beanName, Class<T> clazz) {
         BeanInfo beanInfo = new BeanInfo(beanName, clazz);
-        return (T) beans.get(beanInfo);
+        return (T) getBean(beanInfo);
+    }
+
+    public static Object getBean(BeanInfo beanInfo) {
+        return beans.get(beanInfo);
+    }
+
+    public static Object getBean(String beanName) {
+        BeanInfo beanInfo = beans.keySet().stream().filter(key -> key.isCorrespondName(beanName)).findFirst().orElseThrow(NoFindBeanByBeanNameException::new);
+        return getBean(beanInfo);
+    }
+
+    public static <T> T getBean(Class<T> clazz) {
+        BeanInfo beanInfo = beans.keySet().stream().filter(key -> key.sameType(clazz)).findFirst().orElseThrow(NoFindBeanByTypeException::new);
+        return (T) getBean(beanInfo);
     }
 
     private static <T> void putBean(String beanName, Class<T> clazz, Object bean) {
         BeanInfo beanInfo = new BeanInfo(beanName, clazz);
         beans.put(beanInfo, bean);
+    }
+
+    public static <T> Map<BeanInfo, T> getBeans(Class<T> type) {
+        Map<BeanInfo, T> result = new HashMap<>();
+        beans.forEach((key, value) -> {
+            if (key.sameType(type) || key.isAssignableFrom(type)) result.put(key, (T) value);
+        });
+
+        return result;
+    }
+
+    public static Map<BeanInfo, Object> getAnnotatedBeans(Class<? extends Annotation> annotation) {
+        Map<BeanInfo, Object> result = new HashMap<>();
+        beans.forEach((key, value) -> {
+            if (key.isAnnotated(annotation)) result.put(key, value);
+        });
+
+        return result;
     }
 
 }
