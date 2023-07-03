@@ -46,8 +46,12 @@ public class ServerRunner {
     }
 
     public static void startServer() {
+        addLifecycleListener((event -> {
+            if (event.getType().equals(Lifecycle.AFTER_INIT_EVENT)) BeanFactory.initialize();
+        }));
+
         serverThread.start();
-        BeanFactory.initialize();
+
     }
 
 }
