@@ -4,12 +4,8 @@ import com.project.winter.beans.BeanFactory;
 import com.project.winter.beans.BeanInfo;
 import com.project.winter.mvc.controller.Controller;
 import com.project.winter.mvc.handler.HandlerKey;
-import com.project.winter.mvc.handler.HandlerMethod;
 import com.project.winter.web.HttpMethod;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.lang.reflect.Method;
 import java.util.Map;
 
 public class BeanNameUrlHandlerMapping extends AbstractHandlerMapping {
@@ -19,17 +15,11 @@ public class BeanNameUrlHandlerMapping extends AbstractHandlerMapping {
         Map<BeanInfo, Controller> controllerMap = BeanFactory.getBeans(Controller.class);
 
         controllerMap.forEach((key, controller) -> {
-            try {
-                Method handlerRequest = controller.getClass().getMethod("handleRequest", HttpServletRequest.class, HttpServletResponse.class);
+            String beanName = key.getBeanName();
+            if (!beanName.startsWith("/")) beanName = "/" + beanName;
 
-                HandlerMethod handlerMethod = new HandlerMethod(controller, handlerRequest);
-
-                HandlerKey handlerKey = new HandlerKey(key.getBeanName(), HttpMethod.GET);
-
-                handlerMethods.put(handlerKey, handlerMethod);
-            } catch (NoSuchMethodException e) {
-                throw new RuntimeException(e);
-            }
+            HandlerKey handlerKey = new HandlerKey(beanName, HttpMethod.GET);
+            handlerMethods.put(handlerKey, controller);
         });
     }
 
