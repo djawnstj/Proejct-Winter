@@ -1,5 +1,6 @@
 package com.project.winter.beans;
 
+import java.lang.annotation.Annotation;
 import java.util.Objects;
 
 public class BeanInfo {
@@ -19,6 +20,14 @@ public class BeanInfo {
         return this.clazz == type;
     }
 
+    public boolean isAssignableFrom(Class<?> type) {
+        return type.isAssignableFrom(this.clazz);
+    }
+
+    public boolean isAnnotated(Class<? extends Annotation> annotation) {
+        return clazz.isAnnotationPresent(annotation);
+    }
+
     public String getBeanName() {
         return this.beanName;
     }
@@ -32,7 +41,7 @@ public class BeanInfo {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         BeanInfo beanInfo = (BeanInfo) o;
-        return Objects.equals(clazz, beanInfo.clazz);
+        return beanInfo.clazz.isAssignableFrom(clazz);
     }
 
     @Override
