@@ -15,18 +15,36 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 public class BeanFactory {
-    private static String packagePrefix = "com.project.winter";
-    private static Reflections reflections;
-    private static final Map<BeanInfo, Object> beans = new HashMap<>();
-    private static final List<Object> configurations = new ArrayList<>();
+
+    private static volatile BeanFactory instance;
+
+    private String packagePrefix = "com.project.winter";
+    private Reflections reflections;
+    private final Map<BeanInfo, Object> beans = new HashMap<>();
+    private final List<Object> configurations = new ArrayList<>();
 
     private BeanFactory() {}
 
-    public static void setTargetPackage(String packagePrefix) {
-        BeanFactory.packagePrefix = packagePrefix;
+    public static BeanFactory getInstance() {
+        if (instance == null) initInstance();
+
+        return instance;
     }
 
-    public static void initialize() {
+    public static void initInstance() {
+        synchronized (BeanFactory.class) {
+            if (instance == null) {
+                instance = new BeanFactory();
+                instance.initialize();
+            }
+        }
+    }
+
+    public void setTargetPackage(String packagePrefix) {
+        BeanFactory.getInstance().packagePrefix = packagePrefix;
+    }
+
+    private void initialize() {
         reflections = new Reflections(packagePrefix);
         Set<Class<?>> preInstantiatedClazz = getClassTypeAnnotatedWith(Component.class);
 
@@ -34,7 +52,7 @@ public class BeanFactory {
         createBeansByClass(preInstantiatedClazz);
     }
 
-    private static Set<Class<?>> getClassTypeAnnotatedWith(Class<? extends Annotation> annotation) {
+    private Set<Class<?>> getClassTypeAnnotatedWith(Class<? extends Annotation> annotation) {
         Set<Class<?>> types = new HashSet<>();
 
         reflections.getTypesAnnotatedWith(annotation).forEach(type -> {
@@ -47,11 +65,11 @@ public class BeanFactory {
         return types;
     }
 
-    private static void createBeansByConfiguration() {
-        configurations.forEach(BeanFactory::createBeanInConfigurationAnnotatedClass);
+    private void createBeansByConfiguration() {
+        configurations.forEach(getInstance()::createBeanInConfigurationAnnotatedClass);
     }
 
-    private static void createBeanInConfigurationAnnotatedClass(Object configuration) {
+    private void createBeanInConfigurationAnnotatedClass(Object configuration) {
         Class<?> subclass = configuration.getClass();
         Map<Class<?>, Method> beanMethodNames = BeanFactoryUtils.getBeanAnnotatedMethodInConfiguration(subclass);
 
@@ -76,7 +94,7 @@ public class BeanFactory {
         });
     }
 
-    private static void createBeansByClass(Set<Class<?>> preInstantiatedClazz) {
+    private void createBeansByClass(Set<Class<?>> preInstantiatedClazz) {
         for (Class<?> clazz : preInstantiatedClazz) {
             if (isBeanInitialized(clazz.getSimpleName(), clazz)) continue;
 
@@ -85,7 +103,7 @@ public class BeanFactory {
         }
     }
 
-    private static Object createInstance(Class<?> clazz) {
+    private Object createInstance(Class<?> clazz) {
         Constructor<?> constructor = findConstructor(clazz);
 
         try {
@@ -95,7 +113,7 @@ public class BeanFactory {
         }
     }
 
-    private static Constructor<?> findConstructor(Class<?> clazz) {
+    private Constructor<?> findConstructor(Class<?> clazz) {
 
         Set<Constructor> allConstructors = ReflectionUtils.getAllConstructors(clazz);
 
@@ -111,36 +129,36 @@ public class BeanFactory {
         return foundConstructor;
     }
 
-    private static boolean isBeanInitialized(String beanName, Class<?> clazz) {
+    private boolean isBeanInitialized(String beanName, Class<?> clazz) {
         BeanInfo beanInfo = new BeanInfo(beanName, clazz);
         return beans.containsKey(beanInfo);
     }
 
-    public static <T> T getBean(String beanName, Class<T> clazz) {
+    public <T> T getBean(String beanName, Class<T> clazz) {
         BeanInfo beanInfo = new BeanInfo(beanName, clazz);
         return (T) getBean(beanInfo);
     }
 
-    public static Object getBean(BeanInfo beanInfo) {
+    public Object getBean(BeanInfo beanInfo) {
         return beans.get(beanInfo);
     }
 
-    public static Object getBean(String beanName) {
+    public Object getBean(String beanName) {
         BeanInfo beanInfo = beans.keySet().stream().filter(key -> key.isCorrespondName(beanName)).findFirst().orElseThrow(NoFindBeanByBeanNameException::new);
         return getBean(beanInfo);
     }
 
-    public static <T> T getBean(Class<T> clazz) {
+    public <T> T getBean(Class<T> clazz) {
         BeanInfo beanInfo = beans.keySet().stream().filter(key -> key.sameType(clazz)).findFirst().orElseThrow(NoFindBeanByTypeException::new);
         return (T) getBean(beanInfo);
     }
 
-    private static <T> void putBean(String beanName, Class<T> clazz, Object bean) {
+    private <T> void putBean(String beanName, Class<T> clazz, Object bean) {
         BeanInfo beanInfo = new BeanInfo(beanName, clazz);
         beans.put(beanInfo, bean);
     }
 
-    public static <T> Map<BeanInfo, T> getBeans(Class<T> type) {
+    public <T> Map<BeanInfo, T> getBeans(Class<T> type) {
         Map<BeanInfo, T> result = new HashMap<>();
         beans.forEach((key, value) -> {
             if (key.sameType(type) || key.isAssignableFrom(type)) result.put(key, (T) value);
@@ -149,7 +167,7 @@ public class BeanFactory {
         return result;
     }
 
-    public static Map<BeanInfo, Object> getAnnotatedBeans(Class<? extends Annotation> annotation) {
+    public Map<BeanInfo, Object> getAnnotatedBeans(Class<? extends Annotation> annotation) {
         Map<BeanInfo, Object> result = new HashMap<>();
         beans.forEach((key, value) -> {
             if (key.isAnnotated(annotation)) result.put(key, value);

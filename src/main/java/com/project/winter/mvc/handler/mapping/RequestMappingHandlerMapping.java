@@ -15,7 +15,7 @@ public class RequestMappingHandlerMapping extends AbstractHandlerMapping {
 
     @Override
     public void init() {
-        Map<BeanInfo, Object> controllers = BeanFactory.getAnnotatedBeans(Controller.class);
+        Map<BeanInfo, Object> controllers = BeanFactory.getInstance().getAnnotatedBeans(Controller.class);
 
         controllers.forEach((key, controller) -> {
             Class<?> clazz = controller.getClass();
