@@ -12,7 +12,7 @@ public class BeanNameUrlHandlerMapping extends AbstractHandlerMapping {
 
     @Override
     public void init() {
-        Map<BeanInfo, Controller> controllerMap = BeanFactory.getBeans(Controller.class);
+        Map<BeanInfo, Controller> controllerMap = BeanFactory.getInstance().getBeans(Controller.class);
 
         controllerMap.forEach((key, controller) -> {
             String beanName = key.getBeanName();
