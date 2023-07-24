@@ -37,11 +37,10 @@ public class HandlerMethod {
         return parameterList.toArray();
     }
 
-    public String handle(HttpServletRequest req, HttpServletResponse res) throws Exception {
+    public Object handle(HttpServletRequest req, HttpServletResponse res) throws Exception {
         this.parameters = initParameters(req, res);
-        Object result = this.method.invoke(bean, parameters);
 
-        return (String) result;
+        return this.method.invoke(bean, parameters);
     }
 
 }
