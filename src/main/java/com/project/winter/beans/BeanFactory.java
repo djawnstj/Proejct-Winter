@@ -3,6 +3,8 @@ package com.project.winter.beans;
 import com.project.winter.annotation.Bean;
 import com.project.winter.annotation.Component;
 import com.project.winter.annotation.Configuration;
+import com.project.winter.config.WebMvcConfigurationSupport;
+import com.project.winter.config.WebMvcConfigurer;
 import com.project.winter.exception.bean.NoFindBeanByTypeException;
 import com.project.winter.exception.bean.NoFindBeanByBeanNameException;
 import org.reflections.ReflectionUtils;
@@ -13,6 +15,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class BeanFactory {
 
@@ -21,7 +24,8 @@ public class BeanFactory {
     private String packagePrefix = "com.project.winter";
     private Reflections reflections;
     private final Map<BeanInfo, Object> beans = new HashMap<>();
-    private final List<Object> configurations = new ArrayList<>();
+
+    private final WebMvcConfigurationSupport configurationSupport = new WebMvcConfigurationSupport();
 
     private BeanFactory() {}
 
@@ -48,25 +52,16 @@ public class BeanFactory {
         reflections = new Reflections(packagePrefix);
         Set<Class<?>> preInstantiatedClazz = getClassTypeAnnotatedWith(Component.class);
 
-        createBeansByConfiguration();
         createBeansByClass(preInstantiatedClazz);
+
+        configurationSupport.loadConfigurer();
     }
 
     private Set<Class<?>> getClassTypeAnnotatedWith(Class<? extends Annotation> annotation) {
-        Set<Class<?>> types = new HashSet<>();
-
-        reflections.getTypesAnnotatedWith(annotation).forEach(type -> {
-            if (!type.isAnnotation() && !type.isInterface()) {
-                if (type.isAnnotationPresent(Configuration.class)) configurations.add(createInstance(type));
-                else types.add(type);
-            }
-        });
-
-        return types;
-    }
-
-    private void createBeansByConfiguration() {
-        configurations.forEach(getInstance()::createBeanInConfigurationAnnotatedClass);
+        return reflections.getTypesAnnotatedWith(annotation)
+                .stream()
+                .filter(type -> (!type.isAnnotation() && !type.isInterface()))
+                .collect(Collectors.toSet());
     }
 
     private void createBeanInConfigurationAnnotatedClass(Object configuration) {
@@ -95,12 +90,23 @@ public class BeanFactory {
     }
 
     private void createBeansByClass(Set<Class<?>> preInstantiatedClazz) {
+        List<WebMvcConfigurer> configurers = new ArrayList<>();
+
         for (Class<?> clazz : preInstantiatedClazz) {
             if (isBeanInitialized(clazz.getSimpleName(), clazz)) continue;
 
             Object instance = createInstance(clazz);
+
+            if (clazz.isAnnotationPresent(Configuration.class)) {
+                createBeanInConfigurationAnnotatedClass(instance);
+
+                if (WebMvcConfigurer.class.isAssignableFrom(instance.getClass())) configurers.add((WebMvcConfigurer) instance);
+            }
+
             putBean(clazz.getName(), clazz, instance);
         }
+
+        configurationSupport.addWebMvcConfigurers(configurers);
     }
 
     private Object createInstance(Class<?> clazz) {
