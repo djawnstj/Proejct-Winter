@@ -66,20 +66,33 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     private void doDispatch(HttpServletRequest req, HttpServletResponse res) {
+
+        HandlerExecutionChain mappedHandler = null;
+        Exception dispatchException = null;
+
         try {
-            HandlerExecutionChain mappedHandler = getHandler(req);
+            mappedHandler = getHandler(req);
 
             if (mappedHandler == null) throw new HandlerNotFoundException();
 
             HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
+            if (!mappedHandler.applyPreHandle(req, res)) {
+                return ;
+            }
+
             ModelAndView mv = ha.handle(req, res, mappedHandler.getHandler());
 
             render(mv, req, res);
 
+            mappedHandler.applyPostHandle(req, res, mv);
+
         } catch (Exception e) {
             if (e instanceof HandlerNotFoundException) res.setStatus(HttpStatus.NOT_FOUND.getCode());
+            dispatchException = e;
             // TODO ExceptionResolver 개발시 예외 발생시 추가 로직 필요
+        } finally {
+            if (mappedHandler != null) mappedHandler.triggerAfterCompletion(req, res, dispatchException);
         }
     }
 
