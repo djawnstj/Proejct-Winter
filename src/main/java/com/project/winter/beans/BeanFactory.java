@@ -25,7 +25,7 @@ public class BeanFactory {
     private Reflections reflections;
     private final Map<BeanInfo, Object> beans = new HashMap<>();
 
-    private final WebMvcConfigurationSupport configurationSupport = new WebMvcConfigurationSupport();
+    protected final WebMvcConfigurationSupport configurationSupport = new WebMvcConfigurationSupport();
 
     private BeanFactory() {}
 
@@ -66,7 +66,7 @@ public class BeanFactory {
 
     private void createBeanInConfigurationAnnotatedClass(Object configuration) {
         Class<?> subclass = configuration.getClass();
-        Map<Class<?>, Method> beanMethodNames = BeanFactoryUtils.getBeanAnnotatedMethodInConfiguration(subclass);
+        Map<Class<?>, Method> beanMethodNames = getBeanAnnotatedMethodInConfiguration(subclass);
 
         beanMethodNames.forEach((clazz, method) -> {
             List<Object> parameters = new ArrayList<>();
@@ -87,6 +87,20 @@ public class BeanFactory {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    public static Map<Class<?>, Method> getBeanAnnotatedMethodInConfiguration(Class<?> configuration) {
+        Map<Class<?>, Method> instantMap = new HashMap<>();
+
+        Arrays.stream(configuration.getMethods()).forEach(method -> {
+            Class<?> returnType = method.getReturnType();
+            if (returnType == void.class || instantMap.containsKey(returnType)) return;
+
+            boolean isBeanMethod = Arrays.stream(method.getAnnotations()).anyMatch(anno -> anno.annotationType() == Bean.class);
+            if (isBeanMethod) instantMap.put(returnType, method);
+        });
+
+        return instantMap;
     }
 
     private void createBeansByClass(Set<Class<?>> preInstantiatedClazz) {
