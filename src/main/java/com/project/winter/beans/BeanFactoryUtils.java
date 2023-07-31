@@ -1,6 +1,7 @@
 package com.project.winter.beans;
 
 import com.project.winter.mvc.handler.mapping.HandlerMapping;
+import com.project.winter.mvc.resolver.exception.HandlerExceptionResolver;
 
 import java.util.*;
 
@@ -15,6 +16,10 @@ public class BeanFactoryUtils {
         handlerMappings.forEach(HandlerMapping::init);
 
         return handlerMappings;
+    }
+
+    public static List<HandlerExceptionResolver> initHandlerExceptionResolvers() {
+        return BeanFactory.getInstance().configurationSupport.getHandlerExceptionResolvers();
     }
 
 }
