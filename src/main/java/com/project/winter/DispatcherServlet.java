@@ -7,6 +7,7 @@ import com.project.winter.mvc.handler.adapter.HandlerAdapter;
 import com.project.winter.mvc.handler.adapter.RequestMappingHandlerAdapter;
 import com.project.winter.mvc.handler.adapter.SimpleControllerHandlerAdapter;
 import com.project.winter.mvc.handler.mapping.HandlerMapping;
+import com.project.winter.mvc.resolver.exception.HandlerExceptionResolver;
 import com.project.winter.mvc.view.ModelAndView;
 import com.project.winter.mvc.view.View;
 import com.project.winter.mvc.view.resolver.JspViewResolver;
@@ -34,6 +35,8 @@ public class DispatcherServlet extends HttpServlet {
 
     private List<ViewResolver> viewResolvers;
 
+    private List<HandlerExceptionResolver> handlerExceptionResolvers;
+
     @Override
     public void init() throws ServletException {
         log.info("DispatcherServlet init() called.");
@@ -41,6 +44,7 @@ public class DispatcherServlet extends HttpServlet {
         initHandlerMappings();
         initHandlerAdapters();
         initViewResolvers();
+        initHandlerExceptionResolvers();
     }
 
     private void initHandlerMappings() {
@@ -58,6 +62,10 @@ public class DispatcherServlet extends HttpServlet {
         this.viewResolvers.add(new JspViewResolver());
     }
 
+    private void initHandlerExceptionResolvers() {
+        this.handlerExceptionResolvers = BeanFactoryUtils.initHandlerExceptionResolvers();
+    }
+
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         log.info("DispatcherServlet service() called.");
@@ -71,28 +79,34 @@ public class DispatcherServlet extends HttpServlet {
         Exception dispatchException = null;
 
         try {
-            mappedHandler = getHandler(req);
+            ModelAndView mv = null;
 
-            if (mappedHandler == null) throw new HandlerNotFoundException();
+            try {
+                mappedHandler = getHandler(req);
 
-            HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+                if (mappedHandler == null) {
+                    noHandlerFound(req, res);
+                    return;
+                }
 
-            if (!mappedHandler.applyPreHandle(req, res)) {
-                return ;
+                HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+                if (!mappedHandler.applyPreHandle(req, res)) {
+                    return ;
+                }
+
+                mv = ha.handle(req, res, mappedHandler.getHandler());
+
+                mappedHandler.applyPostHandle(req, res, mv);
+
+            } catch (Exception e) {
+                dispatchException = e;
             }
 
-            ModelAndView mv = ha.handle(req, res, mappedHandler.getHandler());
-
-            render(mv, req, res);
-
-            mappedHandler.applyPostHandle(req, res, mv);
+            processDispatchResult(req, res, mappedHandler, mv, dispatchException);
 
         } catch (Exception e) {
-            if (e instanceof HandlerNotFoundException) res.setStatus(HttpStatus.NOT_FOUND.getCode());
-            dispatchException = e;
-            // TODO ExceptionResolver 개발시 예외 발생시 추가 로직 필요
-        } finally {
-            if (mappedHandler != null) mappedHandler.triggerAfterCompletion(req, res, dispatchException);
+            triggerAfterCompletion(req, res, mappedHandler, e);
         }
     }
 
@@ -103,6 +117,12 @@ public class DispatcherServlet extends HttpServlet {
         }
 
         return null;
+    }
+
+    private void noHandlerFound(HttpServletRequest req, HttpServletResponse res) throws HandlerNotFoundException {
+        res.setStatus(HttpStatus.NOT_FOUND.getCode());
+
+        throw new HandlerNotFoundException("Not found Handler for " + req.getMethod() + " " + req.getRequestURI());
     }
 
     private HandlerAdapter getHandlerAdapter(Object handler) throws Exception {
@@ -140,4 +160,36 @@ public class DispatcherServlet extends HttpServlet {
 
         return null;
     }
+
+    private void processDispatchResult(HttpServletRequest req, HttpServletResponse res, HandlerExecutionChain mappedHandler, ModelAndView mv, Exception ex) throws Exception {
+        if (ex != null) {
+            if (ex instanceof HandlerNotFoundException) {
+                mv = ((HandlerNotFoundException) ex).getModelAndView();
+            }
+            else mv = processHandlerException(req, res, mappedHandler, ex);
+        }
+
+        render(mv, req, res);
+
+        triggerAfterCompletion(req, res, mappedHandler, ex);
+    }
+
+    private ModelAndView processHandlerException(HttpServletRequest req, HttpServletResponse res, Object handler, Exception ex) throws Exception {
+        ModelAndView exMv = null;
+
+        if (this.handlerExceptionResolvers != null) {
+            for (final HandlerExceptionResolver resolver : this.handlerExceptionResolvers) {
+                exMv = resolver.resolveException(req, res, handler, ex);
+
+                if (exMv != null) return exMv;
+            }
+        }
+
+        throw ex;
+    }
+
+    private void triggerAfterCompletion(HttpServletRequest req, HttpServletResponse res, HandlerExecutionChain mappedHandler, Exception ex) {
+        if (mappedHandler != null) mappedHandler.triggerAfterCompletion(req, res, ex);
+    }
+
 }
