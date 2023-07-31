@@ -8,6 +8,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,14 +47,20 @@ public class HandlerMethod {
     public void handle(HttpServletRequest req, HttpServletResponse res, ModelAndViewContainer mavContainer) throws Exception {
         this.parameters = initParameters(req, res, mavContainer);
 
-        Object view = this.method.invoke(bean, parameters);
+        try {
+            Object view = this.method.invoke(bean, parameters);
 
-        mavContainer.setView(view);
+            mavContainer.setView(view);
 
-        req.getAttributeNames().asIterator().forEachRemaining(name -> {
-            Object value = req.getAttribute(name);
-            mavContainer.addAttribute(name, value);
-        });
+            req.getAttributeNames().asIterator().forEachRemaining(name -> {
+                Object value = req.getAttribute(name);
+                mavContainer.addAttribute(name, value);
+            });
+        } catch (InvocationTargetException e) {
+            Throwable originalException = e.getTargetException();
+            if (originalException instanceof RuntimeException) throw (RuntimeException) originalException;
+            else if (originalException instanceof Exception) throw (Exception) originalException;
+        }
     }
 
 }
